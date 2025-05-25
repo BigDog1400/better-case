@@ -1,3 +1,4 @@
+'use client'
 import * as React from "react"
 import {
   BookOpen,
@@ -26,6 +27,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { ModeToggle } from "./mode-toggle"
 
 // Updated data structure for Better Case
 const getBetterCaseData = (userName?: string | null, userEmail?: string | null) => ({
@@ -122,7 +124,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={betterCaseData.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
+        <div className="flex items-center justify-between">
         <NavUser user={betterCaseData.user} />
+        <ModeToggle/>
+        </div>
       </SidebarFooter>
     </Sidebar>
   )

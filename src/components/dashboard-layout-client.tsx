@@ -1,5 +1,7 @@
-import React from "react"; // Added React for React.ReactNode
-import { redirect } from "next/navigation"; // Needed for potential auth checks in layout
+"use client"
+import React from "react";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -8,7 +10,6 @@ import {
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-  // BreadcrumbSeparator, // Not used in this simplified header
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -16,27 +17,41 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getSession } from "@/server/auth";
 
-export default async function DashboardLayout({
+export default function DashboardLayoutClient({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
 
-  // Minimal auth check for layout, page itself will handle detailed session logic
-  const session = await getSession()
+  React.useEffect(() => {
+    if (!session && !isSessionPending) {
+      router.push("/login");
+    }
+  }, [session, isSessionPending, router]);
 
-  if (!session) {
-    redirect("/login");
+  if (isSessionPending) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
+  if (!session) {
+    return null; // Redirecting
+  }
+  
+  const handleCreateCase = () => {
+    router.push("/cases/new");
+  };
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        {/* Header within SidebarInset - This is part of the shared layout */}
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 px-4 border-b bg-background sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
@@ -52,7 +67,7 @@ export default async function DashboardLayout({
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <Button size="sm" className="flex items-center gap-2">
+          <Button onClick={handleCreateCase} size="sm" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Nuevo Caso
           </Button>
