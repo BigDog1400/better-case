@@ -1,13 +1,14 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
+import { api } from "@/trpc/react"; // Import api
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Send, AlertTriangle, ArrowLeft } from "lucide-react"
+import { Send, AlertTriangle, ArrowLeft, Loader2 } from "lucide-react" // Added Loader2
 import { ChatMessageComponent } from "./chat-message"
-import type { ChatMessage, Case } from "@/lib/types"
+import type { ChatMessage, Case } from "@/lib/types" // ChatMessage might be inferred
 
 interface ChatInterfaceProps {
   caseData: Case
@@ -15,90 +16,80 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ caseData, onBack }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      caseId: caseData.id,
-      role: 'assistant',
-      content: `¡Hola! Soy tu Estratega IA para el caso "${caseData.name}". Estoy aquí para ayudarte a desarrollar estrategias legales, analizar argumentos y explorar diferentes enfoques para tu caso.\n\n¿En qué aspecto específico del caso te gustaría que trabajemos juntos?`,
-      timestamp: new Date()
-    }
-  ])
+  const utils = api.useUtils();
   const [inputMessage, setInputMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const { data: messages = [], isLoading: isLoadingMessages, error: messagesError } = api.chatMessage.listByCaseId.useQuery(
+    { caseId: caseData.id },
+    {
+      initialData: () => [ // Provide initial data to avoid flicker and show greeting
+        {
+          id: 'initial-ai-greeting',
+          caseId: caseData.id,
+          role: 'assistant',
+          content: `¡Hola! Soy tu Estratega IA para el caso "${caseData.name}". Estoy aquí para ayudarte a desarrollar estrategias legales, analizar argumentos y explorar diferentes enfoques para tu caso.\n\n¿En qué aspecto específico del caso te gustaría que trabajemos juntos?`,
+          timestamp: new Date()
+        }
+      ],
+      refetchOnWindowFocus: false, // Optional: disable refetch on window focus
+    }
+  );
+
+  const createMessageMutation = api.chatMessage.create.useMutation({
+    onMutate: async (newMessageData) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await utils.chatMessage.listByCaseId.cancel({ caseId: caseData.id });
+
+      // Snapshot the previous value
+      const previousMessages = utils.chatMessage.listByCaseId.getData({ caseId: caseData.id });
+
+      // Optimistically update to the new value
+      const optimisticMessage: ChatMessage = {
+        id: `optimistic-${Date.now()}`, // Temporary ID
+        caseId: newMessageData.caseId,
+        role: newMessageData.role as 'user' | 'assistant', // Ensure role is correctly typed
+        content: newMessageData.content,
+        timestamp: new Date(),
+      };
+      utils.chatMessage.listByCaseId.setData({ caseId: caseData.id }, (oldMessages = []) => [...oldMessages, optimisticMessage]);
+      
+      setInputMessage(""); // Clear input after optimistic update
+      return { previousMessages }; // Return context with the optimistic message and previous messages
+    },
+    onError: (err, newMessage, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        utils.chatMessage.listByCaseId.setData({ caseId: caseData.id }, context.previousMessages);
+      }
+      // TODO: Show error toast to user
+      console.error("Error sending message:", err);
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure server state
+      utils.chatMessage.listByCaseId.invalidate({ caseId: caseData.id });
+      textareaRef.current?.focus();
+    },
+  });
+  
+  const isLoading = createMessageMutation.isLoading; // isLoading is now from the mutation
+
   useEffect(() => {
-    // Scroll to bottom when new messages are added
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
     }
-  }, [messages])
-
-  const generateAIResponse = async (userMessage: string): Promise<string> => {
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000))
-    
-    // Mock AI responses based on keywords
-    const lowerMessage = userMessage.toLowerCase()
-    
-    if (lowerMessage.includes('estrategia') || lowerMessage.includes('enfoque')) {
-      return `Para desarrollar una estrategia efectiva en el caso "${caseData.name}", te sugiero considerar los siguientes enfoques:\n\n1. **Análisis de precedentes**: Revisar casos similares en el área de ${caseData.areaOfLaw}\n2. **Fortalezas del caso**: Identificar los elementos más sólidos de tu posición\n3. **Posibles objeciones**: Anticipar argumentos de la contraparte\n\n¿Te gustaría profundizar en alguno de estos aspectos específicos?`
-    }
-    
-    if (lowerMessage.includes('argumento') || lowerMessage.includes('defensa')) {
-      return `Los argumentos clave para tu caso podrían incluir:\n\n• **Fundamento legal**: Basado en las leyes venezolanas aplicables\n• **Evidencia documental**: Documentos que respalden tu posición\n• **Jurisprudencia**: Decisiones judiciales previas favorables\n\n¿Qué tipo de evidencia tienes disponible para respaldar estos argumentos?`
-    }
-    
-    if (lowerMessage.includes('riesgo') || lowerMessage.includes('problema')) {
-      return `Es importante evaluar los riesgos potenciales:\n\n⚠️ **Riesgos identificados**:\n- Posibles contrargumentos de la otra parte\n- Requisitos procesales específicos\n- Plazos legales críticos\n\n💡 **Estrategias de mitigación**:\n- Preparación exhaustiva de documentación\n- Análisis de jurisprudencia favorable\n- Consideración de alternativas de resolución\n\n¿Hay algún riesgo específico que te preocupe?`
-    }
-    
-    // Default response
-    return `Entiendo tu consulta sobre "${userMessage}". Para el caso "${caseData.name}" en el área de ${caseData.areaOfLaw}, es importante considerar:\n\n• El contexto legal específico venezolano\n• Los precedentes relevantes en esta materia\n• Las mejores prácticas procesales\n\n¿Podrías ser más específico sobre qué aspecto te gustaría explorar en detalle?`
-  }
+  }, [messages, createMessageMutation.data]); // Also scroll when new message from mutation comes in
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return
+    if (!inputMessage.trim() || createMessageMutation.isLoading) return
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+    createMessageMutation.mutate({
       caseId: caseData.id,
       role: 'user',
       content: inputMessage.trim(),
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setInputMessage("")
-    setIsLoading(true)
-
-    try {
-      const aiResponse = await generateAIResponse(inputMessage.trim())
-      
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        caseId: caseData.id,
-        role: 'assistant',
-        content: aiResponse,
-        timestamp: new Date()
-      }
-
-      setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
-      console.error('Error generating AI response:', error)
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        caseId: caseData.id,
-        role: 'assistant',
-        content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta nuevamente.',
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMessage])
-    } finally {
-      setIsLoading(false)
-    }
+    });
+    // Input is cleared optimistically in onMutate
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -114,7 +105,7 @@ export function ChatInterface({ caseData, onBack }: ChatInterfaceProps) {
       <Card className="mb-4">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={onBack}>
+            <Button variant="ghost" size="sm" onClick={onBack} aria-label="Volver">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">
@@ -140,23 +131,37 @@ export function ChatInterface({ caseData, onBack }: ChatInterfaceProps) {
       <Card className="flex-1 flex flex-col">
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
+            {/* Display messages from useQuery, which includes optimistic updates */}
             {messages.map((message) => (
               <ChatMessageComponent key={message.id} message={message} />
             ))}
-            {isLoading && (
+            {/* The tRPC create endpoint now handles creating the assistant's response,
+                so the loading indicator for the assistant's response is implicit
+                while the listByCaseId query is being invalidated and refetched.
+                We can show a specific loading indicator if the mutation is pending. */}
+            {createMessageMutation.isLoading && (
               <ChatMessageComponent 
                 message={{
-                  id: 'loading',
+                  id: 'ai-reply-loading',
                   caseId: caseData.id,
                   role: 'assistant',
-                  content: '',
+                  content: '', // Empty content while loading
                   timestamp: new Date()
                 }}
-                isLoading={true}
+                isLoading={true} // This prop will show the dots animation
               />
             )}
           </div>
         </ScrollArea>
+        
+        {messagesError && (
+          <Alert variant="destructive" className="m-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Error al cargar mensajes: {messagesError.message}. Intenta recargar la página.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Input */}
         <CardContent className="border-t p-4">
@@ -168,20 +173,30 @@ export function ChatInterface({ caseData, onBack }: ChatInterfaceProps) {
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               className="min-h-[60px] max-h-32 resize-none"
-              disabled={isLoading}
+              disabled={createMessageMutation.isLoading}
             />
             <Button 
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
+              disabled={!inputMessage.trim() || createMessageMutation.isLoading}
               size="lg"
               className="px-4"
+              aria-label="Enviar mensaje"
             >
-              <Send className="h-4 w-4" />
+              {createMessageMutation.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
             Presiona Enter para enviar, Shift+Enter para nueva línea
           </p>
+          {createMessageMutation.error && (
+             <p className="text-xs text-red-500 mt-1">
+               Error al enviar: {createMessageMutation.error.message}
+             </p>
+          )}
         </CardContent>
       </Card>
     </div>

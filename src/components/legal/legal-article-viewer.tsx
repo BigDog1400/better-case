@@ -1,39 +1,92 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { api } from "@/trpc/react"; // Import api
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
+import { AlertTriangle, Loader2 } from "lucide-react"; // Added icons
 import { Separator } from "@/components/ui/separator"
-import { Copy, Star, ArrowLeft, BookOpen } from "lucide-react"
+import { Copy, Star, ArrowLeft, BookOpen } from "lucide-react" // Removed: BookText, Landmark, Tag, FileCheck2
 import { toast } from "sonner"
-import type { LegalArticle } from "@/lib/types"
+import type { LegalArticle } from "@/lib/types" // LegalArticle might be inferred
 
 interface LegalArticleViewerProps {
-  article: LegalArticle
-  onBack: () => void
-  highlightTerms?: string[]
+  articleId: string; // Changed from article: LegalArticle
+  onBack: () => void;
+  highlightTerms?: string[];
 }
 
-export function LegalArticleViewer({ article, onBack, highlightTerms = [] }: LegalArticleViewerProps) {
+export function LegalArticleViewer({ articleId, onBack, highlightTerms = [] }: LegalArticleViewerProps) {
+  const { data: article, isLoading, error } = api.legalArticle.getById.useQuery(
+    { id: articleId },
+    { enabled: !!articleId } // Fetch only if articleId is provided
+  );
+
+  // Fetch legalAreaOptions for displaying category label
+  const { data: legalAreaOptions, isLoading: isLoadingOptions, error: optionsError } = api.case.getLegalAreaOptions.useQuery(undefined, {
+    enabled: !!article, // Fetch only when article is loaded
+  });
+  
+  const areaLabel = article && legalAreaOptions?.find(option => option.value === article.category)?.label || article?.category;
+
   const handleCopyText = () => {
-    navigator.clipboard.writeText(article.fullText)
-    toast.success("Texto copiado al portapapeles")
-  }
+    if (article) {
+      navigator.clipboard.writeText(article.fullText);
+      toast.success("Texto copiado al portapapeles");
+    }
+  };
 
   const handleLinkToCase = () => {
-    toast.success("Artículo vinculado al caso")
-  }
+    // This functionality would require a mutation if it involves backend changes
+    toast.success("Artículo vinculado al caso (simulado)");
+  };
 
   const highlightText = (text: string, terms: string[]) => {
-    if (terms.length === 0) return text
-    
-    let highlightedText = text
+    if (terms.length === 0) return text;
+    let highlightedText = text;
     terms.forEach(term => {
-      const regex = new RegExp(`(${term})`, 'gi')
-      highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>')
-    })
-    
-    return highlightedText
+      const regex = new RegExp(`(${term})`, 'gi');
+      highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>');
+    });
+    return highlightedText;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 p-4">
+        <Skeleton className="h-12 w-3/4 mb-4" />
+        <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
+        <Card>
+          <CardHeader><Skeleton className="h-8 w-1/4 mb-2" /><div className="flex gap-2"><Skeleton className="h-8 w-24" /><Skeleton className="h-8 w-24" /></div></CardHeader>
+          <CardContent><Skeleton className="h-64 w-full" /></CardContent>
+        </Card>
+        <Card><CardHeader><Skeleton className="h-8 w-1/4 mb-2" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+      </div>
+    );
   }
 
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 p-4 text-center">
+        <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-red-600">Error al cargar el artículo</h2>
+        <p className="text-muted-foreground mb-4">{error.message}</p>
+        <Button onClick={onBack} variant="outline">Volver</Button>
+      </div>
+    );
+  }
+
+  if (!article) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 p-4 text-center">
+        <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-xl font-semibold">Artículo no encontrado</h2>
+        <p className="text-muted-foreground mb-4">No se pudo encontrar el artículo solicitado.</p>
+        <Button onClick={onBack} variant="outline">Volver</Button>
+      </div>
+    );
+  }
+  
+  // Main content once article is loaded
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -52,7 +105,9 @@ export function LegalArticleViewer({ article, onBack, highlightTerms = [] }: Leg
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{article.category}</Badge>
+                  {isLoadingOptions && <Skeleton className="h-5 w-20"/>}
+                  {optionsError && <Badge variant="destructive" className="text-xs">Error área</Badge>}
+                  {!isLoadingOptions && areaLabel && <Badge variant="outline">{areaLabel}</Badge>}
                   <BookOpen className="h-5 w-5 text-muted-foreground" />
                 </div>
               </div>
@@ -109,7 +164,9 @@ export function LegalArticleViewer({ article, onBack, highlightTerms = [] }: Leg
           
           <div>
             <h4 className="font-medium mb-2">Categoría</h4>
-            <Badge variant="secondary">{article.category}</Badge>
+            {isLoadingOptions && <Skeleton className="h-5 w-24"/>}
+            {optionsError && <Badge variant="destructive" className="text-xs">Error área</Badge>}
+            {!isLoadingOptions && areaLabel && <Badge variant="secondary">{areaLabel}</Badge>}
           </div>
           
           <Separator />

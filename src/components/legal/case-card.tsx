@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, User, FileText } from "lucide-react"
+import { Calendar, User, FileText, AlertCircle } from "lucide-react" // Added AlertCircle
 import type { Case } from "@/lib/types"
-import { legalAreaOptions } from "@/lib/mock-data"
+import { api } from "@/trpc/react"; // Import api
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 
 interface CaseCardProps {
   case: Case
@@ -12,7 +13,9 @@ interface CaseCardProps {
 }
 
 export function CaseCard({ case: caseData, onView, onEdit }: CaseCardProps) {
-  const areaLabel = legalAreaOptions.find(option => option.value === caseData.areaOfLaw)?.label || caseData.areaOfLaw
+  const { data: legalAreaOptions, isLoading: isLoadingOptions, error: optionsError } = api.case.getLegalAreaOptions.useQuery();
+  
+  const areaLabel = legalAreaOptions?.find(option => option.value === caseData.areaOfLaw)?.label || caseData.areaOfLaw;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -24,9 +27,13 @@ export function CaseCard({ case: caseData, onView, onEdit }: CaseCardProps) {
               {caseData.description}
             </CardDescription>
           </div>
-          <Badge variant="secondary" className="ml-2">
-            {areaLabel}
-          </Badge>
+          {isLoadingOptions && <Skeleton className="h-6 w-20 ml-2" />}
+          {optionsError && <Badge variant="destructive" className="ml-2 text-xs"><AlertCircle className="h-3 w-3 mr-1 inline-block"/> Error</Badge>}
+          {!isLoadingOptions && !optionsError && legalAreaOptions && (
+            <Badge variant="secondary" className="ml-2">
+              {areaLabel}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       

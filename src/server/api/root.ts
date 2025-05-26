@@ -1,5 +1,9 @@
 import { postRouter } from "@/server/api/routers/post";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
+import { caseRouter } from "@/server/api/routers/case";
+import { legalSuggestionRouter } from "@/server/api/routers/legalSuggestion";
+import { chatMessageRouter } from "@/server/api/routers/chatMessage";
+import { legalArticleRouter } from "@/server/api/routers/legalArticle";
 
 /**
  * This is the primary router for your server.
@@ -8,6 +12,10 @@ import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   post: postRouter,
+  case: caseRouter,
+  legalSuggestion: legalSuggestionRouter,
+  chatMessage: chatMessageRouter,
+  legalArticle: legalArticleRouter,
 });
 
 // export type definition of API

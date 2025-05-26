@@ -23,7 +23,9 @@ export function ChatMessageComponent({ message, isLoading = false }: ChatMessage
   }
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div 
+      className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+    >
       {!isUser && (
         <Avatar className="h-8 w-8 mt-1">
           <AvatarFallback className="bg-primary text-primary-foreground">
