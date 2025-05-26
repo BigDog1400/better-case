@@ -95,8 +95,8 @@ model Country {
 }
 
 model AreaOfLaw {
-  id          String   @id @default(uuid()) // Or Int @id @default(autoincrement())
-  name        String   @unique // e.g., "Civil", "Penal", "Mercantil", "Laboral", "Constitucional"
+  id          String   @id @default(uuid())
+  name        String   @unique 
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
