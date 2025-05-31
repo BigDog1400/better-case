@@ -10,15 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { Case, AreaOfLaw } from "@prisma/client"
-import { legalAreaOptions } from "@/lib/constants"
+import { getTranslatedAreaOfLawName } from "@/lib/getTranslatedAreaOfLawName";
 
-interface CaseFormProps {
-  case?: Case & { areaOfLaw?: AreaOfLaw | null }
-  onSubmit: (caseData: Partial<Case>) => void
-  isLoading?: boolean
+// Define the type for legal area options
+export interface LegalAreaOption {
+  value: string;
+  code: string; // Changed from label to code
 }
 
-export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: CaseFormProps) {
+interface CaseFormProps {
+  case?: Case & { areaOfLaw?: AreaOfLaw | null };
+  onSubmit: (caseData: Partial<Case>) => void;
+  isLoading?: boolean;
+  legalAreaOptions: LegalAreaOption[]; // Add new prop
+}
+
+export function CaseForm({ case: existingCase, onSubmit, isLoading = false, legalAreaOptions }: CaseFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     caseName: existingCase?.caseName ?? "",
@@ -124,7 +131,7 @@ export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: Ca
               <SelectContent>
                 {legalAreaOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                    {getTranslatedAreaOfLawName(option.code, 'es')}
                   </SelectItem>
                 ))}
               </SelectContent>

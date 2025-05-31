@@ -17,6 +17,7 @@ export default function EditCasePage() {
     { id: caseId },
     { enabled: !!session }
   );
+  const legalAreaOptionsQuery = api.case.getLegalAreaOptions.useQuery();
 
   const updateCaseMutation = api.case.update.useMutation({
     onSuccess: () => {
@@ -35,7 +36,7 @@ export default function EditCasePage() {
     }
   }, [session, isSessionPending, router]);
 
-  if (isSessionPending || isCaseLoading) {
+  if (isSessionPending || isCaseLoading || legalAreaOptionsQuery.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -48,6 +49,15 @@ export default function EditCasePage() {
   }
 
   const handleSubmit = async (updatedCaseData: Partial<Case>) => {
+    if (legalAreaOptionsQuery.error) {
+      toast.error("Error al cargar las áreas legales. No se puede guardar el caso.");
+      return;
+    }
+    // It's good practice to ensure data is available, though CaseForm might render empty select if not.
+    if (!legalAreaOptionsQuery.data) {
+      toast.info("Áreas legales aún cargando. Por favor espera antes de guardar.");
+      return;
+    }
     updateCaseMutation.mutate({ id: caseId, ...updatedCaseData });
   };
 
@@ -64,6 +74,7 @@ export default function EditCasePage() {
         case={caseData}
         onSubmit={handleSubmit}
         isLoading={updateCaseMutation.isPending}
+        legalAreaOptions={legalAreaOptionsQuery.data ?? []}
       />
     </div>
   );

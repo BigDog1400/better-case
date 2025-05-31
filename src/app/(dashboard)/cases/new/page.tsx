@@ -10,6 +10,7 @@ export default function NewCasePage() {
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = authClient.useSession();
   const countriesQuery = api.country.getAll.useQuery();
+  const legalAreaOptionsQuery = api.case.getLegalAreaOptions.useQuery();
 
   const createCaseMutation = api.case.create.useMutation({
     onSuccess: (newCase) => {
@@ -22,7 +23,7 @@ export default function NewCasePage() {
     },
   });
 
-  if (isSessionPending || countriesQuery.isLoading) {
+  if (isSessionPending || countriesQuery.isLoading || legalAreaOptionsQuery.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -31,20 +32,28 @@ export default function NewCasePage() {
   }
 
   const handleSubmit = async (caseData: Partial<Case>) => {
+    if (legalAreaOptionsQuery.error) {
+      toast.error("Error al cargar las áreas legales. Intenta de nuevo.");
+      return;
+    }
+    if (!legalAreaOptionsQuery.data) {
+      toast.info("Áreas legales aún cargando. Por favor espera."); // Or handle as error
+      return;
+    }
     if (!countriesQuery.data || countriesQuery.data.length === 0) {
       toast.error("No hay países disponibles para crear un caso.");
       return;
     }
 
     // Use the first country as a default for now
-    const defaultCountryId = countriesQuery.data[0].id;
+    const defaultCountryIsoCode = 'VE';
 
     createCaseMutation.mutate({
-      userId: session.user.id,
-      countryId: defaultCountryId,
-      areaOfLawId: caseData.areaOfLawId,
+      userId: session?.user.id ?? '',
+      countryIsoCode: defaultCountryIsoCode,
+      areaOfLawId: caseData.areaOfLawId ?? '',
       caseName: caseData.caseName!,
-      clientName: caseData.clientName ?? null, // Ensure clientName is string or null
+      clientName: caseData.clientName ?? '',
       caseDescriptionInput: caseData.caseDescriptionInput!,
     });
   };
@@ -61,6 +70,7 @@ export default function NewCasePage() {
       <CaseForm 
         onSubmit={handleSubmit}
         isLoading={createCaseMutation.isPending}
+        legalAreaOptions={legalAreaOptionsQuery.data ?? []}
       />
     </div>
   );

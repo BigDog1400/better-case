@@ -1,5 +1,4 @@
 "use client"
-import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/trpc/react";
@@ -17,20 +16,15 @@ export default function CaseDetailPage() {
   const router = useRouter();
   const params = useParams();
   const caseId = params.id as string;
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const { data: session } = authClient.useSession();
   
   const { data: caseData, isLoading: isCaseLoading } = api.case.getById.useQuery(
     { id: caseId },
     { enabled: !!session } // Only fetch if session exists
   );
 
-  useEffect(() => {
-    if (!session && !isSessionPending) {
-      router.push("/login");
-    }
-  }, [session, isSessionPending, router]);
 
-  if (isSessionPending || isCaseLoading) {
+  if (isCaseLoading) {
     return (
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <div className="space-y-6">
@@ -49,7 +43,7 @@ export default function CaseDetailPage() {
     return null;
   }
 
-  const areaLabel = getTranslatedAreaOfLawName(caseData.areaOfLaw?.code as string, 'es');
+  const areaLabel = getTranslatedAreaOfLawName(caseData.areaOfLaw?.code ?? '', 'es');
 
   const handleEditCase = () => {
     router.push(`/cases/${caseId}/edit`);

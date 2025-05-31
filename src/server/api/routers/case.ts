@@ -8,7 +8,7 @@ export const caseRouter = createTRPCRouter({
     .input(
       z.object({
         userId: z.string(),
-        countryId: z.string(),
+        countryIsoCode: z.string(),
         areaOfLawId: z.string().optional(),
         caseName: z.string().min(1),
         clientName: z.string().optional(),
@@ -17,10 +17,19 @@ export const caseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        const country = await ctx.db.country.findUnique({
+          where: { isoCode: input.countryIsoCode },
+        });
+        if (!country) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Country not found",
+          });
+        }
         return await ctx.db.case.create({
           data: {
             userId: input.userId,
-            countryId: input.countryId,
+            countryId: country.id,
             areaOfLawId: input.areaOfLawId,
             caseName: input.caseName,
             clientName: input.clientName,
@@ -141,5 +150,18 @@ export const caseRouter = createTRPCRouter({
       totalCases,
       casesThisMonth,
     };
+  }),
+
+  // Get all legal area options for forms
+  getLegalAreaOptions: protectedProcedure.query(async ({ ctx }) => {
+    const areasOfLaw = await ctx.db.areaOfLaw.findMany({
+      orderBy: {
+        code: 'asc',
+      },
+    });
+    return areasOfLaw.map((area) => ({
+      value: area.id,
+      code: area.code,
+    }));
   }),
 });
