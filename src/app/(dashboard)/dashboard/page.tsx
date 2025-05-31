@@ -2,37 +2,33 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, FileText, Scale, Briefcase } from "lucide-react"; // Added Briefcase
+import { Plus, Search, Filter, FileText, Briefcase } from "lucide-react";
 import { CaseCard } from "@/components/legal/case-card";
-import { mockCases, legalAreaOptions } from "@/lib/mock-data";
-import type { Case } from "@/lib/types";
-import { LegalArea } from "@/lib/types";
 
-// Layout components are now in dashboard/layout.tsx
-// import { AppSidebar } from "@/components/app-sidebar";
-// import {
-//   Breadcrumb,
-//   BreadcrumbItem,
-//   BreadcrumbList,
-//   BreadcrumbPage,
-//   BreadcrumbSeparator,
-// } from "@/components/ui/breadcrumb";
-// import { Separator } from "@/components/ui/separator";
-// import {
-//   SidebarInset,
-//   SidebarProvider,
-//   SidebarTrigger,
-// } from "@/components/ui/sidebar";
+
+// Define legalAreaOptions with string values
+const legalAreaOptions = [
+  { value: "CIVIL", label: "Civil" },
+  { value: "PENAL", label: "Penal" },
+  { value: "LABOR", label: "Laboral" },
+  { value: "FAMILY", label: "Familia" },
+  { value: "COMMERCIAL", label: "Comercial" },
+  { value: "ADMINISTRATIVE", label: "Administrativo" },
+  { value: "CONSTITUTIONAL", label: "Constitucional" },
+  { value: "INTERNATIONAL", label: "Internacional" },
+  { value: "TRIBUTARY", label: "Tributario" },
+  { value: "INTELLECTUAL", label: "Propiedad Intelectual" },
+];
 
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = authClient.useSession();
-  const [cases, setCases] = useState<Case[]>(mockCases);
+  const casesQuery = api.case.getAll.useQuery();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterArea, setFilterArea] = useState<string>("all");
 
@@ -54,16 +50,6 @@ export default function DashboardPage() {
     return null; // Will redirect via useEffect
   }
 
-  const filteredCases = cases.filter(caseItem => {
-    const matchesSearch = caseItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         caseItem.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         caseItem.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterArea === "all" || caseItem.areaOfLaw === filterArea;
-    
-    return matchesSearch && matchesFilter;
-  });
-
   const handleViewCase = (caseId: string) => {
     router.push(`/cases/${caseId}`);
   };
@@ -76,17 +62,7 @@ export default function DashboardPage() {
     router.push("/cases/new");
   };
   
-  const activeCasesCount = cases.filter(c => c.status === 'active').length;
-  // Basic logic for most common area, can be improved
-  const areaCounts = cases.reduce((acc, curr) => {
-    acc[curr.areaOfLaw] = (acc[curr.areaOfLaw] || 0) + 1;
-    return acc;
-  }, {} as Record<LegalArea, number>);
-  const mostCommonAreaValue = Object.keys(areaCounts).length > 0
-    ? Object.keys(areaCounts).reduce((a, b) => areaCounts[a as LegalArea] > areaCounts[b as LegalArea] ? a : b) as LegalArea
-    : LegalArea.CIVIL; // Default if no cases
-  const mostCommonAreaLabel = legalAreaOptions.find(opt => opt.value === mostCommonAreaValue)?.label || mostCommonAreaValue;
-
+  
   // The SidebarProvider, AppSidebar, SidebarInset and header are now in dashboard/layout.tsx
   return (
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -108,22 +84,9 @@ export default function DashboardPage() {
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{activeCasesCount}</div>
+                <div className="text-2xl font-bold">3</div>
                 <p className="text-xs text-muted-foreground">
                   Total de casos en progreso
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Área Más Común</CardTitle>
-                <Scale className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mostCommonAreaLabel}</div>
-                <p className="text-xs text-muted-foreground">
-                  Área legal predominante
                 </p>
               </CardContent>
             </Card>
@@ -172,9 +135,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Cases Grid */}
-          {filteredCases.length > 0 ? (
+          {casesQuery.data && casesQuery.data.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredCases.map((caseItem) => (
+              {casesQuery.data.map((caseItem) => (
                 <CaseCard
                   key={caseItem.id}
                   case={caseItem}
