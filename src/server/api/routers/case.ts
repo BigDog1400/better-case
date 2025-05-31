@@ -56,6 +56,8 @@ export const caseRouter = createTRPCRouter({
           user: true,
           country: true,
           areaOfLaw: true,
+          userLinkedLaws: true,
+          caseGeneralNotes: true,
         },
       });
       if (!legalCase) {

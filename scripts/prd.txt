@@ -1,84 +1,77 @@
-# Product Requirements Document: AI-Powered Legal Case Management System
+# Overview
+This project aims to develop a robust case management application, specifically tailored for legal professionals. It will provide tools for managing legal cases, associated documents, and client information. The primary goal is to transition from current mock data implementations to a fully functional backend integration using tRPC and Prisma, ensuring data persistence and real-time updates.
 
-## 1. Introduction
-This document outlines the requirements for an AI-Powered Legal Case Management System (hereinafter referred to as "Better Case App"). The system aims to provide lawyers and legal professionals with an intelligent, efficient, and streamlined platform to manage their cases, leveraging AI technologies for enhanced productivity and insights.
+# Core Features
+- **Backend CRUD Operations for all Prisma Models**: Implement comprehensive Create, Read, Update, and Delete (CRUD) functionalities for every data model defined in `prisma/schema.prisma`. This includes:
+    - `User`: Core user management, including authentication and profile data.
+    - `Session`: User session management.
+    - `Account`: User account details for authentication providers.
+    - `Verification`: For user verification processes (e.g., email verification).
+    - `Country`: Management of country-specific data, likely for legal jurisdiction.
+    - `AreaOfLaw`: Management of different legal practice areas.
+    - `Case`: The central entity for legal case management, linking users, countries, and areas of law.
+    - `UserLinkedLaw`: For linking specific legal articles or statutes to cases.
+    - `CaseGeneralNote`: For general notes associated with a case.
+- **Frontend Integration with tRPC**: Update all existing frontend components and pages that currently use mock data to instead consume data from the newly implemented tRPC API endpoints. This ensures that the application displays and interacts with live, persistent data.
+- **Mock Data Replacement**: Systematically identify and replace all instances of mock data usage across the frontend with actual data fetched via tRPC queries.
 
-## 2. Goals
-- To simplify and automate routine case management tasks.
-- To provide powerful AI-driven tools for legal research, document analysis, and drafting.
-- To centralize case information, making it easily accessible and searchable.
-- To improve collaboration among legal teams.
-- To enhance decision-making through data-driven insights and AI assistance.
+# User Experience
+- **User Personas**: Legal professionals, case managers, and administrative staff requiring efficient case and client data management.
+- **Key User Flows**:
+    - User login/signup and profile management.
+    - Creation, viewing, editing, and deletion of legal cases.
+    - Association of legal articles and notes with specific cases.
+    - Management of country and area of law data.
+- **UI/UX Considerations**: Maintain a clean, intuitive, and responsive interface that facilitates quick data entry, retrieval, and management. Ensure seamless transition from mock data to live data without disrupting user experience.
 
-## 3. Target Users
-- Solo legal practitioners
-- Lawyers in small to medium-sized law firms
-- In-house legal counsel
-- Paralegals and legal assistants
+# Technical Architecture
+- **System Components**:
+    - **Frontend**: Next.js (React), leveraging existing page and component structure.
+    - **Backend**: Node.js with tRPC for API layer, Prisma ORM for database interaction.
+    - **Database**: PostgreSQL (as defined in `prisma/schema.prisma`).
+- **Data Models**: Based on `prisma/schema.prisma`:
+    - `User`, `Session`, `Account`, `Verification`, `Country`, `AreaOfLaw`, `Case`, `UserLinkedLaw`, `CaseGeneralNote`.
+- **APIs and Integrations**:
+    - tRPC will be the sole API layer, providing type-safe communication between frontend and backend.
+    - Prisma will handle all database operations, abstracting SQL queries.
+    - Existing authentication (NextAuth.js/Auth.js) will be integrated with the `User`, `Session`, `Account`, and `Verification` models.
+- **Infrastructure Requirements**: PostgreSQL database instance, Node.js environment for Next.js application.
 
-## 4. Key Features
+# Development Roadmap
+- **MVP Requirements**:
+    1.  **Backend: Core Model CRUD**: Implement full CRUD operations for `User`, `Case`, `Country`, and `AreaOfLaw` models via tRPC routers.
+    2.  **Frontend: Core Data Integration**: Update key dashboard pages (e.g., `/dashboard`, `/cases`, `/cases/[id]`) to fetch and display data for `User` (profile), `Case`, `Country`, and `AreaOfLaw` using tRPC queries, replacing mock data.
+    3.  **Authentication Flow**: Ensure existing authentication flows correctly interact with the `User`, `Session`, `Account`, and `Verification` models through tRPC.
+- **Future Enhancements**:
+    1.  **Backend: Remaining Model CRUD**: Implement CRUD for `UserLinkedLaw`, and `CaseGeneralNote` models.
+    2.  **Frontend: Full Data Integration**: Update all remaining frontend components and pages to use tRPC queries for all data models, eliminating all mock data.
+    3.  **Advanced Features**: Implement search, filtering, sorting, and pagination for case data. Develop real-time updates using tRPC subscriptions if needed.
 
-### 4.1. Core Case Management
-- **Create, Read, Update, Delete (CRUD) Cases:**
-    - Case details: name, client, area of law, description, status (e.g., open, pending, closed), key dates, assigned lawyer(s).
-    - Ability to link related cases.
-- **Client Management:**
-    - Store client information (contact details, case history).
-    - Link clients to their respective cases.
-- **Area of Law & Country Management:**
-    - Predefined and customizable lists for areas of law and relevant jurisdictions/countries.
+# Logical Dependency Chain
+1.  **Backend Setup**: Ensure Prisma is correctly configured and connected to the PostgreSQL database.
+2.  **tRPC Router Foundation**: Set up the basic tRPC router structure (`src/server/api/root.ts`, `src/server/api/trpc.ts`).
+3.  **Model-Specific tRPC Routers (Backend First)**:
+    - Develop tRPC routers for `User`, `Country`, `AreaOfLaw`, and `Case` models, implementing all CRUD operations.
+    - Implement tRPC routers for `UserLinkedLaw`, and `CaseGeneralNote` models.
+4.  **Frontend Data Layer Integration**:
+    - Update `src/trpc/react.tsx` and `src/trpc/query-client.ts` to correctly configure tRPC client.
+    - Modify `src/lib/mock-data.ts` to remove mock data as it's replaced.
+5.  **Frontend UI Updates (Iterative)**:
+    - Update `src/app/(dashboard)/dashboard/page.tsx` and `src/app/(dashboard)/cases/page.tsx` to use tRPC queries for listing cases.
+    - Update `src/app/(dashboard)/cases/[id]/page.tsx` for single case viewing.
+    - Update `src/components/legal/case-form.tsx` for creating/editing cases.
+    - Continue updating all other relevant components and pages (e.g., `src/components/user-profile.tsx`) to use tRPC.
 
-### 4.2. AI-Powered Chatbot
-- **Legal Research Assistance:**
-    - Natural language queries to find relevant statutes, case law, and legal articles.
-    - Integration with legal databases (potentially via APIs or indexed content).
-- **Case Summarization:**
-    - Generate summaries of case files or specific documents.
-- **Document Drafting Assistance:**
-    - Provide templates and suggestions for common legal documents.
-    - Help draft clauses or sections based on user input.
-- **Q&A on Case Details:**
-    - Answer questions about specific cases based on the information stored in the system.
+# Risks and Mitigations
+- **Technical Challenges**:
+    - **Risk**: Complexity in implementing generic CRUD for all models while maintaining type safety and specific business logic.
+    - **Mitigation**: Develop a reusable pattern for tRPC routers and Prisma service layers. Leverage tRPC's strong typing to catch errors early.
+- **Figuring out the MVP that we can build upon**:
+    - **Mitigation**: Strictly adhere to the defined MVP requirements, prioritizing essential CRUD operations and frontend integrations for the most critical models (`User`, `Case`, `Country`, `AreaOfLaw`).
+- **Resource Constraints**:
+    - **Risk**: Limited time or personnel to complete the transition.
+    - **Mitigation**: Focus on automated testing for backend CRUD to ensure reliability. Prioritize high-impact frontend changes first.
 
-### 4.3. Elasticsearch Integration
-- **Advanced Search:**
-    - Full-text search across all case data, including notes, documents, and metadata.
-    - Faceted search and filtering (e.g., by client, date, area of law, status).
-- **Document Indexing:**
-    - Index uploaded documents (PDFs, Word files, etc.) for comprehensive search.
-- **Legal Suggestion Engine:**
-    - Surface relevant internal case information, precedents, or linked law articles based on current case context or query.
-    - Display snippets, relevance scores, and links to full text.
-
-### 4.4. Document Management
-- **Secure Document Upload & Storage:**
-    - Attach documents to specific cases.
-    - Version control for documents.
-- **Optical Character Recognition (OCR):**
-    - Make scanned documents searchable.
-
-### 4.5. User Management & Security
-- **Authentication & Authorization:**
-    - Role-based access control (e.g., admin, lawyer, paralegal).
-    - Secure login mechanisms.
-- **Data Privacy & Compliance:**
-    - Features to support compliance with relevant data protection regulations (e.g., GDPR, CCPA).
-
-### 4.6. Task Management & Calendar (Future Considerations)
-- **Task Assignment:** Assign tasks related to cases to team members.
-- **Deadline Tracking:** Set and manage deadlines for cases and tasks.
-- **Calendar Integration:** View case-related events and deadlines.
-
-## 5. Technical Considerations
-- **Backend:** Node.js, tRPC, Prisma (for database interaction)
-- **Database:** Relational database (e.g., PostgreSQL)
-- **Search:** Elasticsearch
-- **Frontend:** Web-based (e.g., Next.js, React)
-- **AI:** Integration with LLMs for chatbot and other AI features.
-
-## 6. Success Metrics
-- User adoption rate and daily/monthly active users.
-- Average time spent per user in the application.
-- Reduction in time spent on manual case management tasks (user-reported).
-- Number of AI-assisted searches/queries performed.
-- User satisfaction scores (e.g., NPS).
+# Appendix
+- **Prisma Schema**: Refer to `prisma/schema.prisma` for the definitive data model structure.
+- **Existing Mock Data**: `src/lib/mock-data.ts` contains the current mock data structures that need to be replaced. You may need to update the fronted components to show the real data

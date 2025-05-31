@@ -1,61 +1,49 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronUp, Edit, Calendar, User, FileText, Brain, MessageSquare } from "lucide-react";
+import { ChevronDown, Edit, Calendar, User, FileText, Brain, MessageSquare } from "lucide-react";
 import { SuggestionCard } from "@/components/legal/suggestion-card";
-import { mockCases, mockLegalSuggestions, legalAreaOptions } from "@/lib/mock-data";
-import type { Case, LegalSuggestion } from "@/lib/types";
+
+
+const legalAreaOptions = [
+  { value: "CIVIL", label: "Civil" },
+  { value: "PENAL", label: "Penal" },
+  { value: "LABOR", label: "Laboral" },
+  { value: "FAMILY", label: "Familia" },
+  { value: "COMMERCIAL", label: "Comercial" },
+  { value: "ADMINISTRATIVE", label: "Administrativo" },
+  { value: "CONSTITUTIONAL", label: "Constitucional" },
+  { value: "INTERNATIONAL", label: "Internacional" },
+  { value: "TRIBUTARY", label: "Tributario" },
+  { value: "INTELLECTUAL", label: "Propiedad Intelectual" },
+];
 
 export default function CaseDetailPage() {
   const router = useRouter();
   const params = useParams();
   const caseId = params.id as string;
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
   
-  const [caseData, setCaseData] = useState<Case | null>(null);
-  const [suggestions, setSuggestions] = useState<LegalSuggestion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { data: caseData, isLoading: isCaseLoading } = api.case.getById.useQuery(
+    { id: caseId },
+    { enabled: !!session } // Only fetch if session exists
+  );
 
   useEffect(() => {
-    if (!session && !isPending) {
+    if (!session && !isSessionPending) {
       router.push("/login");
-      return;
     }
+  }, [session, isSessionPending, router]);
 
-    // Simulate loading case data
-    const loadCaseData = async () => {
-      setIsLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Find case in mock data or create a new one for demo
-      const foundCase = mockCases.find(c => c.id === caseId) || {
-        ...mockCases[0],
-        id: caseId
-      };
-      
-      const caseSuggestions = mockLegalSuggestions.filter(s => s.caseId === caseId || s.caseId === '1');
-      
-      setCaseData(foundCase);
-      setSuggestions(caseSuggestions);
-      setIsLoading(false);
-    };
-
-    if (session) {
-      loadCaseData();
-    }
-  }, [session, isPending, router, caseId]);
-
-  if (isPending || isLoading) {
+  if (isSessionPending || isCaseLoading) {
     return (
       <div className="container mx-auto max-w-6xl px-4 py-8">
         <div className="space-y-6">
@@ -65,7 +53,7 @@ export default function CaseDetailPage() {
             <Skeleton className="h-48" />
             <Skeleton className="h-48" />
           </div>
-        </div>
+        </div>  
       </div>
     );
   }
@@ -74,7 +62,7 @@ export default function CaseDetailPage() {
     return null;
   }
 
-  const areaLabel = legalAreaOptions.find(option => option.value === caseData.areaOfLaw)?.label || caseData.areaOfLaw;
+  const areaLabel = legalAreaOptions.find(option => option.value === caseData.areaOfLaw?.name)?.label ?? caseData.areaOfLaw?.name ?? 'N/A';
 
   const handleEditCase = () => {
     router.push(`/cases/${caseId}/edit`);
@@ -94,7 +82,7 @@ export default function CaseDetailPage() {
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">{caseData.name}</h1>
+            <h1 className="text-3xl font-bold mb-2">{caseData.caseName}</h1>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <Badge variant="secondary">{areaLabel}</Badge>
               <div className="flex items-center gap-1">
@@ -103,7 +91,8 @@ export default function CaseDetailPage() {
               </div>
               <div className="flex items-center gap-1">
                 <FileText className="h-4 w-4" />
-                Estado: {caseData.status === 'active' ? 'Activo' : 'Archivado'}
+                {/* Removed status as it's not in Prisma schema */}
+                Estado: Activo
               </div>
             </div>
           </div>
@@ -114,28 +103,30 @@ export default function CaseDetailPage() {
         </div>
 
         {/* Case Summary - Collapsible */}
-        <Collapsible open={!isCollapsed} onOpenChange={setIsCollapsed}>
+        <Collapsible>
           <Card>
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Resumen del Caso</CardTitle>
-                  {isCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                  {/* The CollapsibleTrigger will handle its own open/close icon or you can add a static one if needed */}
+                  {/* For simplicity, removing the dynamic icon based on isCollapsed state */}
+                  <ChevronDown className="h-5 w-5" /> {/* Or use a generic icon like ChevronsUpDownIcon */}
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0">
-                {caseData.client && (
+                {caseData.clientName && (
                   <div className="flex items-center gap-2 mb-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <User className="h-4 w-4" />
                     <span className="font-medium">Cliente:</span>
-                    <span>{caseData.client}</span>
+                    <span>{caseData.clientName}</span>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <h4 className="font-medium">Descripción:</h4>
-                  <p className="text-muted-foreground leading-relaxed">{caseData.description}</p>
+                  <h4 className="font-medium">Descripciรณn:</h4>
+                  <p className="text-muted-foreground leading-relaxed">{caseData.caseDescriptionInput}</p>
                 </div>
               </CardContent>
             </CollapsibleContent>
@@ -167,17 +158,17 @@ export default function CaseDetailPage() {
             <div>
               <h2 className="text-2xl font-bold">Sugerencias Legales</h2>
               <p className="text-muted-foreground">
-                Artículos y leyes relevantes identificados automáticamente por IA
+                Artรญculos y leyes relevantes identificados automรกticamente por IA
               </p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {suggestions.length} sugerencias encontradas
+              {caseData.userLinkedLaws?.length || 0} sugerencias encontradas
             </Badge>
           </div>
 
-          {suggestions.length > 0 ? (
+          {caseData.userLinkedLaws && caseData.userLinkedLaws.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {suggestions.map((suggestion) => (
+              {caseData.userLinkedLaws.map((suggestion) => (
                 <SuggestionCard
                   key={suggestion.id}
                   suggestion={suggestion}
@@ -191,7 +182,7 @@ export default function CaseDetailPage() {
                 <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <CardTitle className="mb-2">Analizando caso...</CardTitle>
                 <CardDescription>
-                  La IA está procesando la información del caso para generar sugerencias legales relevantes.
+                  La IA estรก procesando la informaciรณn del caso para generar sugerencias legales relevantes.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -215,14 +206,14 @@ export default function CaseDetailPage() {
           <Card className="text-center py-12">
             <CardContent>
               <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <CardTitle className="mb-2">Estratega IA para {caseData.name}</CardTitle>
+              <CardTitle className="mb-2">Estratega IA para {caseData.caseName}</CardTitle>
               <CardDescription className="mb-4">
-                Inicia una conversación con la IA especializada para explorar estrategias legales, 
+                Inicia una conversaciรณn con la IA especializada para explorar estrategias legales, 
                 analizar argumentos y obtener insights para tu caso.
               </CardDescription>
               <Button onClick={handleOpenStrategist} size="lg" className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                Comenzar Conversación
+                Comenzar Conversaciรณn
               </Button>
             </CardContent>
           </Card>
@@ -232,9 +223,9 @@ export default function CaseDetailPage() {
           <Card className="text-center py-12">
             <CardContent>
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <CardTitle className="mb-2">Próximamente</CardTitle>
+              <CardTitle className="mb-2">Prรณximamente</CardTitle>
               <CardDescription>
-                Esta funcionalidad estará disponible en una futura actualización.
+                Esta funcionalidad estarรก disponible en una futura actualizaciรณn.
               </CardDescription>
             </CardContent>
           </Card>
@@ -244,9 +235,9 @@ export default function CaseDetailPage() {
           <Card className="text-center py-12">
             <CardContent>
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <CardTitle className="mb-2">Próximamente</CardTitle>
+              <CardTitle className="mb-2">Prรณximamente</CardTitle>
               <CardDescription>
-                Esta funcionalidad estará disponible en una futura actualización.
+                Esta funcionalidad estarรก disponible en una futura actualizaciรณn.
               </CardDescription>
             </CardContent>
           </Card>

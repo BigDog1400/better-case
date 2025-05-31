@@ -2,17 +2,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, User } from "lucide-react"
-import { legalAreaOptions } from "@/lib/mock-data"
 import { Case } from "@prisma/client"
 
 interface CaseCardProps {
-  case: Case
+  case: Case & {
+    areaOfLaw?: {
+      name: string;
+    } | null;
+  };
   onView: (caseId: string) => void
   onEdit: (caseId: string) => void
 }
 
 export function CaseCard({ case: caseData, onView, onEdit }: CaseCardProps) {
-  const areaLabel = legalAreaOptions.find(option => option.value === caseData.areaOfLawId)?.label ?? caseData.areaOfLawId
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -25,7 +27,7 @@ export function CaseCard({ case: caseData, onView, onEdit }: CaseCardProps) {
             </CardDescription>
           </div>
           <Badge variant="secondary" className="ml-2">
-            {areaLabel}
+            {caseData.areaOfLaw?.name}
           </Badge>
         </div>
       </CardHeader>
