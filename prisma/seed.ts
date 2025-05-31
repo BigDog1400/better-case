@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database with countries...');
-  const countries = [
+  const countriesData = [
     { name: 'Afghanistan', isoCode: 'AF' },
     { name: 'Albania', isoCode: 'AL' },
     { name: 'Algeria', isoCode: 'DZ' },
@@ -253,19 +253,67 @@ async function main() {
   ];
 
   await prisma.country.createMany({
-    data: countries,
+    data: countriesData, // Renamed variable to avoid conflict
     skipDuplicates: true,
   });
+  console.log(`Seeded ${countriesData.length} countries`);
 
-  console.log(`Seeded ${countries.length} countries`);
+  await prisma.country.createMany({
+    data: countriesData,
+    skipDuplicates: true,
+  });
+  console.log(`Seeded ${countriesData.length} countries`);
+
+  console.log('Seeding database with Areas of Law (codes and descriptions only)...');
+  const areasOfLawData = [
+    // --- General & Foundational ---
+    { code: 'CONSTITUTIONAL', description: 'Fundamental principles and structure of the State.' },
+    { code: 'HUMAN_RIGHTS', description: 'Fundamental guarantees of individuals.' },
+    // --- Public Law ---
+    { code: 'ADMINISTRATIVE', description: 'Relations between the State and citizens and functioning of public administration.' },
+    { code: 'PENAL', description: 'Crimes and sanctions.' },
+    { code: 'PROCEDURAL_GENERAL', description: 'Rules governing judicial procedures.' },
+    { code: 'PROCEDURAL_CIVIL', description: 'Procedures in civil and commercial matters.' },
+    { code: 'PROCEDURAL_PENAL', description: 'Procedures in criminal matters.' },
+    { code: 'TAX', description: 'Taxes, fees and contributions.' },
+    // --- Private Law ---
+    { code: 'CIVIL', description: 'Relationships between individuals (persons, family, property, inheritance, obligations, contracts).' },
+    { code: 'COMMERCIAL', description: 'Commercial acts, business entities, credit instruments.' },
+    // --- Social Law ---
+    { code: 'LABOR', description: 'Relationships between workers and employers, social security.' },
+    { code: 'AGRARIAN_ENVIRONMENTAL', description: 'Regulation of agricultural activity and environmental protection.' },
+    { code: 'CHILD_ADOLESCENT', description: 'Organic Law for the Protection of Children and Adolescents.' },
+    // --- Specialized Areas ---
+    { code: 'INTERNATIONAL_PUBLIC', description: 'Relations between States and other international subjects.' },
+    { code: 'INTERNATIONAL_PRIVATE', description: 'Conflicts of laws in international private relationships.' },
+    { code: 'INTELLECTUAL_PROPERTY', description: 'Copyright, patents, trademarks.' },
+    { code: 'MARITIME', description: 'Regulation of activities at sea.' },
+    { code: 'AERONAUTICAL', description: 'Regulation of air navigation.' },
+    { code: 'BANKING_FINANCIAL', description: 'Regulation of financial entities and capital markets.' },
+    { code: 'INSURANCE', description: 'Insurance contracts and insurance activity.' },
+    { code: 'RENTAL_TENANCY', description: 'Regulation of real estate rentals.' },
+    { code: 'OTHER', description: 'Other unspecified areas of law.'}
+  ];
+
+  // Create each AreaOfLaw and handle potential duplicates by code
+  for (const areaData of areasOfLawData) {
+    await prisma.areaOfLaw.upsert({
+      where: { code: areaData.code }, // Use 'code' for uniqueness check
+      update: { description: areaData.description }, // Update description if code exists
+      create: { code: areaData.code, description: areaData.description },
+    });
+  }
+
+  console.log(`Seeded ${areasOfLawData.length} Areas of Law.`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Error during seeding:', e);
     void prisma.$disconnect(); // Ensure disconnection even on error
     process.exit(1);
   })
   .finally(() => {
+    console.log('Disconnecting Prisma Client...');
     void prisma.$disconnect(); // Ensure disconnection
   });
