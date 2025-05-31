@@ -31,7 +31,8 @@ const config = {
           "attributes": false
         }
       }
-    ]
+    ],
+    "react/no-unescaped-entities": "off"
   }
 }
 module.exports = config;

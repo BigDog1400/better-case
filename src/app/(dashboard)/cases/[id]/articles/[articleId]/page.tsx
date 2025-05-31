@@ -2,68 +2,59 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { api } from "@/trpc/react";
 import { LegalArticleViewer } from "@/components/legal/legal-article-viewer";
-import { mockLegalSuggestions, mockLegalArticles } from "@/lib/mock-data";
-import type { LegalArticle } from "@/lib/types";
+import type { UserLinkedLaw } from "@prisma/client";
+
+// Define a type for the article data to be passed to LegalArticleViewer
+interface LegalArticle {
+  id: string;
+  title: string;
+  articleNumber: string;
+  fullText: string; // This will be a placeholder for now
+  lawCode: string;
+  category: string; // Placeholder or derived from lawCode
+}
 
 export default function ArticleViewerPage() {
   const router = useRouter();
   const params = useParams();
   const caseId = params.id as string;
-  const articleId = params.articleId as string;
-  const { data: session, isPending } = authClient.useSession();
+  const articleId = params.articleId as string; // This is actually userLinkedLawId
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
   
-  const [article, setArticle] = useState<LegalArticle | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: userLinkedLaw, isLoading: isUserLinkedLawLoading } = api.userLinkedLaw.getById.useQuery(
+    { id: articleId },
+    { enabled: !!session }
+  );
 
   useEffect(() => {
-    if (!session && !isPending) {
+    if (!session && !isSessionPending) {
       router.push("/login");
-      return;
     }
+  }, [session, isSessionPending, router]);
 
-    // Load article data
-    const loadArticleData = async () => {
-      setIsLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Find suggestion first to get the article info
-      const suggestion = mockLegalSuggestions.find(s => s.id === articleId);
-      
-      if (suggestion) {
-        // Create article from suggestion data
-        const articleData: LegalArticle = {
-          id: suggestion.id,
-          title: `${suggestion.lawTitle} - ${suggestion.articleNumber}`,
-          articleNumber: suggestion.articleNumber,
-          fullText: suggestion.fullText,
-          lawCode: suggestion.lawTitle,
-          category: mockLegalArticles[0].category // Default category
-        };
-        setArticle(articleData);
-      } else {
-        // Fallback to mock articles
-        const foundArticle = mockLegalArticles.find(a => a.id === articleId) || mockLegalArticles[0];
-        setArticle(foundArticle);
-      }
-      
-      setIsLoading(false);
-    };
-
-    if (session) {
-      loadArticleData();
-    }
-  }, [session, isPending, router, articleId]);
-
-  if (isPending || isLoading) {
+  if (isSessionPending || isUserLinkedLawLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
+
+  if (!session || !userLinkedLaw) {
+    return null;
+  }
+
+  // Construct LegalArticle from userLinkedLaw data
+  const article: LegalArticle = {
+    id: userLinkedLaw.id,
+    title: `${userLinkedLaw.lawTitleCache || 'Artículo'} - ${userLinkedLaw.articleNumberCache || 'N/A'}`,
+    articleNumber: userLinkedLaw.articleNumberCache || 'N/A',
+    fullText: userLinkedLaw.userNotesOnLink || "Contenido del artículo no disponible. Este es un placeholder.", // Placeholder
+    lawCode: userLinkedLaw.lawTitleCache || 'N/A',
+    category: "Legal", // Default category, can be refined later
+  };
 
   if (!session || !article) {
     return null;

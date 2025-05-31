@@ -1,54 +1,41 @@
 "use client"
-import { useState, useEffect } from "react";
+import {  useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { CaseForm } from "@/components/legal/case-form";
+import { api } from "@/trpc/react";
 import { toast } from "sonner";
-import { mockCases } from "@/lib/mock-data";
-import type { Case } from "@/lib/types";
+import type { Case } from "@prisma/client";
 
 export default function EditCasePage() {
   const router = useRouter();
   const params = useParams();
   const caseId = params.id as string;
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
   
-  const [caseData, setCaseData] = useState<Case | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingCase, setIsLoadingCase] = useState(true);
+  const { data: caseData, isLoading: isCaseLoading } = api.case.getById.useQuery(
+    { id: caseId },
+    { enabled: !!session }
+  );
+
+  const updateCaseMutation = api.case.update.useMutation({
+    onSuccess: () => {
+      toast.success("Caso actualizado exitosamente. Re-analizando contenido...");
+      router.push(`/cases/${caseId}`);
+    },
+    onError: (error) => {
+      console.error("Error updating case:", error);
+      toast.error("Error al actualizar el caso. Por favor intenta nuevamente.");
+    },
+  });
 
   useEffect(() => {
-    if (!session && !isPending) {
+    if (!session && !isSessionPending) {
       router.push("/login");
-      return;
     }
+  }, [session, isSessionPending, router]);
 
-    // Load case data
-    const loadCaseData = async () => {
-      setIsLoadingCase(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Find case in mock data
-      const foundCase = mockCases.find(c => c.id === caseId);
-      
-      if (foundCase) {
-        setCaseData(foundCase);
-      } else {
-        toast.error("Caso no encontrado");
-        router.push("/dashboard");
-      }
-      
-      setIsLoadingCase(false);
-    };
-
-    if (session) {
-      loadCaseData();
-    }
-  }, [session, isPending, router, caseId]);
-
-  if (isPending || isLoadingCase) {
+  if (isSessionPending || isCaseLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -61,26 +48,7 @@ export default function EditCasePage() {
   }
 
   const handleSubmit = async (updatedCaseData: Partial<Case>) => {
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, this would be an API call
-      console.log("Updating case:", { ...updatedCaseData, id: caseId });
-      
-      toast.success("Caso actualizado exitosamente. Re-analizando contenido...");
-      
-      // Redirect back to the case detail page
-      router.push(`/cases/${caseId}`);
-      
-    } catch (error) {
-      console.error("Error updating case:", error);
-      toast.error("Error al actualizar el caso. Por favor intenta nuevamente.");
-    } finally {
-      setIsLoading(false);
-    }
+    updateCaseMutation.mutate({ id: caseId, ...updatedCaseData });
   };
 
   return (
@@ -88,14 +56,14 @@ export default function EditCasePage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Editar Caso</h1>
         <p className="text-muted-foreground">
-          Modifica los detalles del caso "{caseData.name}" y re-analiza el contenido para obtener nuevas sugerencias.
+          Modifica los detalles del caso "{caseData.caseName}" y re-analiza el contenido para obtener nuevas sugerencias.
         </p>
       </div>
       
       <CaseForm 
         case={caseData}
         onSubmit={handleSubmit}
-        isLoading={isLoading}
+        isLoading={updateCaseMutation.isPending}
       />
     </div>
   );

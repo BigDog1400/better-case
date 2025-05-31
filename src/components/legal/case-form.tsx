@@ -9,12 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
-import type { Case } from "@/lib/types"
-import { LegalArea } from "@/lib/types"
-import { legalAreaOptions } from "@/lib/mock-data"
+import { Case, AreaOfLaw } from "@prisma/client"
+import { legalAreaOptions } from "@/lib/constants"
 
 interface CaseFormProps {
-  case?: Case
+  case?: Case & { areaOfLaw?: AreaOfLaw | null }
   onSubmit: (caseData: Partial<Case>) => void
   isLoading?: boolean
 }
@@ -22,10 +21,10 @@ interface CaseFormProps {
 export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: CaseFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    name: existingCase?.name || "",
-    client: existingCase?.client || "",
-    areaOfLaw: existingCase?.areaOfLaw || "",
-    description: existingCase?.description || ""
+    caseName: existingCase?.caseName || "",
+    clientName: existingCase?.clientName || "",
+    areaOfLawId: existingCase?.areaOfLawId || "",
+    caseDescriptionInput: existingCase?.caseDescriptionInput || ""
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -33,18 +32,18 @@ export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: Ca
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = "El nombre del caso es obligatorio"
+    if (!formData.caseName.trim()) {
+      newErrors.caseName = "El nombre del caso es obligatorio"
     }
 
-    if (!formData.areaOfLaw) {
-      newErrors.areaOfLaw = "Debe seleccionar un área legal"
+    if (!formData.areaOfLawId) {
+      newErrors.areaOfLawId = "Debe seleccionar un área legal"
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = "La descripción del caso es obligatoria"
-    } else if (formData.description.trim().length < 50) {
-      newErrors.description = "La descripción debe tener al menos 50 caracteres"
+    if (!formData.caseDescriptionInput.trim()) {
+      newErrors.caseDescriptionInput = "La descripción del caso es obligatoria"
+    } else if (formData.caseDescriptionInput.trim().length < 50) {
+      newErrors.caseDescriptionInput = "La descripción debe tener al menos 50 caracteres"
     }
 
     setErrors(newErrors)
@@ -60,9 +59,10 @@ export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: Ca
     }
 
     const caseData: Partial<Case> = {
-      ...formData,
-      areaOfLaw: formData.areaOfLaw as LegalArea,
-      client: formData.client.trim() || undefined
+      caseName: formData.caseName,
+      clientName: formData.clientName.trim() || null, // clientName can be null in Prisma
+      areaOfLawId: formData.areaOfLawId,
+      caseDescriptionInput: formData.caseDescriptionInput,
     }
 
     onSubmit(caseData)
@@ -89,36 +89,36 @@ export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: Ca
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre del Caso *</Label>
+            <Label htmlFor="caseName">Nombre del Caso *</Label>
             <Input
-              id="name"
+              id="caseName"
               placeholder="ej. López vs. Méndez - Divorcio"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className={errors.name ? "border-red-500" : ""}
+              value={formData.caseName}
+              onChange={(e) => setFormData(prev => ({ ...prev, caseName: e.target.value }))}
+              className={errors.caseName ? "border-red-500" : ""}
             />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name}</p>
+            {errors.caseName && (
+              <p className="text-sm text-red-500">{errors.caseName}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="client">Cliente</Label>
+            <Label htmlFor="clientName">Cliente</Label>
             <Input
-              id="client"
+              id="clientName"
               placeholder="Nombre del cliente (opcional)"
-              value={formData.client}
-              onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
+              value={formData.clientName}
+              onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="areaOfLaw">Área Legal *</Label>
+            <Label htmlFor="areaOfLawId">Área Legal *</Label>
             <Select 
-              value={formData.areaOfLaw} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, areaOfLaw: value }))}
+              value={formData.areaOfLawId} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, areaOfLawId: value }))}
             >
-              <SelectTrigger className={errors.areaOfLaw ? "border-red-500" : ""}>
+              <SelectTrigger className={errors.areaOfLawId ? "border-red-500" : ""}>
                 <SelectValue placeholder="Selecciona el área legal" />
               </SelectTrigger>
               <SelectContent>
@@ -129,25 +129,25 @@ export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: Ca
                 ))}
               </SelectContent>
             </Select>
-            {errors.areaOfLaw && (
-              <p className="text-sm text-red-500">{errors.areaOfLaw}</p>
+            {errors.areaOfLawId && (
+              <p className="text-sm text-red-500">{errors.areaOfLawId}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción del Caso *</Label>
+            <Label htmlFor="caseDescriptionInput">Descripción del Caso *</Label>
             <Textarea
-              id="description"
+              id="caseDescriptionInput"
               placeholder="Describe los hechos principales, partes involucradas y preguntas legales clave..."
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className={`min-h-32 ${errors.description ? "border-red-500" : ""}`}
+              value={formData.caseDescriptionInput}
+              onChange={(e) => setFormData(prev => ({ ...prev, caseDescriptionInput: e.target.value }))}
+              className={`min-h-32 ${errors.caseDescriptionInput ? "border-red-500" : ""}`}
             />
             <p className="text-xs text-muted-foreground">
-              {formData.description.length}/500 caracteres (mínimo 50)
+              {formData.caseDescriptionInput.length}/500 caracteres (mínimo 50)
             </p>
-            {errors.description && (
-              <p className="text-sm text-red-500">{errors.description}</p>
+            {errors.caseDescriptionInput && (
+              <p className="text-sm text-red-500">{errors.caseDescriptionInput}</p>
             )}
           </div>
 

@@ -2,48 +2,28 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { api } from "@/trpc/react";
 import { ChatInterface } from "@/components/legal/chat-interface";
-import { mockCases } from "@/lib/mock-data";
-import type { Case } from "@/lib/types";
+import type { Case } from "@prisma/client"; // Import Case from Prisma client
 
 export default function StrategistPage() {
   const router = useRouter();
   const params = useParams();
   const caseId = params.id as string;
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
   
-  const [caseData, setCaseData] = useState<Case | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: caseData, isLoading: isCaseLoading } = api.case.getById.useQuery(
+    { id: caseId },
+    { enabled: !!session } // Only fetch if session exists
+  );
 
   useEffect(() => {
-    if (!session && !isPending) {
+    if (!session && !isSessionPending) {
       router.push("/login");
-      return;
     }
+  }, [session, isSessionPending, router]);
 
-    // Load case data
-    const loadCaseData = async () => {
-      setIsLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Find case in mock data or create a new one for demo
-      const foundCase = mockCases.find(c => c.id === caseId) || {
-        ...mockCases[0],
-        id: caseId
-      };
-      
-      setCaseData(foundCase);
-      setIsLoading(false);
-    };
-
-    if (session) {
-      loadCaseData();
-    }
-  }, [session, isPending, router, caseId]);
-
-  if (isPending || isLoading) {
+  if (isSessionPending || isCaseLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

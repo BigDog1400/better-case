@@ -9,42 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Filter, FileText, Briefcase } from "lucide-react";
 import { CaseCard } from "@/components/legal/case-card";
-
-
-// Define legalAreaOptions with string values
-const legalAreaOptions = [
-  { value: "CIVIL", label: "Civil" },
-  { value: "PENAL", label: "Penal" },
-  { value: "LABOR", label: "Laboral" },
-  { value: "FAMILY", label: "Familia" },
-  { value: "COMMERCIAL", label: "Comercial" },
-  { value: "ADMINISTRATIVE", label: "Administrativo" },
-  { value: "CONSTITUTIONAL", label: "Constitucional" },
-  { value: "INTERNATIONAL", label: "Internacional" },
-  { value: "TRIBUTARY", label: "Tributario" },
-  { value: "INTELLECTUAL", label: "Propiedad Intelectual" },
-];
+import { legalAreaOptions } from "@/lib/constants";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const { data: session } = authClient.useSession();
   const casesQuery = api.case.getAll.useQuery();
+  const caseStatsQuery = api.case.getCaseStats.useQuery();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterArea, setFilterArea] = useState<string>("all");
 
-  useEffect(() => {
-    if (!session && !isSessionPending) {
-      router.push("/login");
-    }
-  }, [session, isSessionPending, router]);
-
-  if (isSessionPending) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   if (!session) {
     return null; // Will redirect via useEffect
@@ -84,7 +58,9 @@ export default function DashboardPage() {
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">3</div>
+                <div className="text-2xl font-bold">
+                  {caseStatsQuery.data?.totalCases ?? 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Total de casos en progreso
                 </p>
@@ -97,9 +73,11 @@ export default function DashboardPage() {
                 <Plus className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">2</div> {/* Placeholder */}
+                <div className="text-2xl font-bold">
+                  {caseStatsQuery.data?.casesThisMonth ?? 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Nuevos casos creados (simulado)
+                  Nuevos casos creados este mes
                 </p>
               </CardContent>
             </Card>

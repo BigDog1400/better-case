@@ -118,4 +118,28 @@ export const caseRouter = createTRPCRouter({
         });
       }
     }),
+
+  getCaseStats: protectedProcedure.query(async ({ ctx }) => {
+    const totalCases = await ctx.db.case.count({
+      where: { userId: ctx.session.user.id },
+    });
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const casesThisMonth = await ctx.db.case.count({
+      where: {
+        userId: ctx.session.user.id,
+        createdAt: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
+    return {
+      totalCases,
+      casesThisMonth,
+    };
+  }),
 });

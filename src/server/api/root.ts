@@ -2,6 +2,9 @@ import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 import { countryRouter } from "./routers/country";
 import { areaOfLawRouter } from "./routers/areaOfLaw";
 import { caseRouter } from "./routers/case";
+import { userLinkedLawRouter } from "./routers/userLinkedLaw";
+import { caseGeneralNoteRouter } from "./routers/caseGeneralNote";
+import { userRouter } from "./routers/user";
 
 /**
  * This is the primary router for your server.
@@ -12,6 +15,9 @@ export const appRouter = createTRPCRouter({
   country: countryRouter,
   areaOfLaw: areaOfLawRouter,
   case: caseRouter,
+  userLinkedLaw: userLinkedLawRouter,
+  caseGeneralNote: caseGeneralNoteRouter,
+  user: userRouter,
 });
 
 // export type definition of API
