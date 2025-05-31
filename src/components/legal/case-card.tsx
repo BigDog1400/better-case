@@ -3,11 +3,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, User } from "lucide-react"
 import { Case } from "@prisma/client"
+import { getTranslatedAreaOfLawName } from "@/lib/getTranslatedAreaOfLawName"
 
 interface CaseCardProps {
   case: Case & {
     areaOfLaw?: {
-      name: string;
+      code: string;
     } | null;
   };
   onView: (caseId: string) => void
@@ -27,7 +28,9 @@ export function CaseCard({ case: caseData, onView, onEdit }: CaseCardProps) {
             </CardDescription>
           </div>
           <Badge variant="secondary" className="ml-2">
-            {caseData.areaOfLaw?.name}
+            {
+              caseData.areaOfLaw?.code ? getTranslatedAreaOfLawName(caseData.areaOfLaw?.code, 'es') : 'N/A'
+            }
           </Badge>
         </div>
       </CardHeader>

@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Edit, Calendar, User, FileText, Brain, MessageSquare } from "lucide-react";
 import { SuggestionCard } from "@/components/legal/suggestion-card";
-import { legalAreaOptions } from "@/lib/constants";
+import { getTranslatedAreaOfLawName } from "@/lib/getTranslatedAreaOfLawName";
 
 export default function CaseDetailPage() {
   const router = useRouter();
@@ -49,7 +49,7 @@ export default function CaseDetailPage() {
     return null;
   }
 
-  const areaLabel = legalAreaOptions.find(option => option.value === caseData.areaOfLaw?.name)?.label ?? caseData.areaOfLaw?.name ?? 'N/A';
+  const areaLabel = getTranslatedAreaOfLawName(caseData.areaOfLaw?.code as string, 'es');
 
   const handleEditCase = () => {
     router.push(`/cases/${caseId}/edit`);

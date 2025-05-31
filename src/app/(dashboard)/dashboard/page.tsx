@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/trpc/react";
@@ -11,6 +11,7 @@ import { Plus, Search, Filter, FileText, Briefcase } from "lucide-react";
 import { CaseCard } from "@/components/legal/case-card";
 import { legalAreaOptions } from "@/lib/constants";
 
+
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const caseStatsQuery = api.case.getCaseStats.useQuery();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterArea, setFilterArea] = useState<string>("all");
+
 
 
   if (!session) {

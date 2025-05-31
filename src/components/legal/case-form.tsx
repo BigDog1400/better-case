@@ -21,10 +21,10 @@ interface CaseFormProps {
 export function CaseForm({ case: existingCase, onSubmit, isLoading = false }: CaseFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    caseName: existingCase?.caseName || "",
-    clientName: existingCase?.clientName || "",
-    areaOfLawId: existingCase?.areaOfLawId || "",
-    caseDescriptionInput: existingCase?.caseDescriptionInput || ""
+    caseName: existingCase?.caseName ?? "",
+    clientName: existingCase?.clientName ?? "",
+    areaOfLawId: existingCase?.areaOfLawId ?? "",
+    caseDescriptionInput: existingCase?.caseDescriptionInput ?? ""
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
