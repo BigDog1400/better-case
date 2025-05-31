@@ -1,17 +1,28 @@
 "use client"
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { CaseForm } from "@/components/legal/case-form";
 import { toast } from "sonner";
-import type { Case } from "@/lib/types";
+import { api } from "@/trpc/react";
+import type { Case } from "@prisma/client";
 
 export default function NewCasePage() {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const countriesQuery = api.country.getAll.useQuery();
 
-  if (isPending) {
+  const createCaseMutation = api.case.create.useMutation({
+    onSuccess: (newCase) => {
+      toast.success("Caso creado exitosamente. Analizando contenido...");
+      router.push(`/cases/${newCase.id}`);
+    },
+    onError: (error) => {
+      console.error("Error creating case:", error);
+      toast.error("Error al crear el caso. Por favor intenta nuevamente.");
+    },
+  });
+
+  if (isSessionPending || countriesQuery.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -19,35 +30,23 @@ export default function NewCasePage() {
     );
   }
 
-  if (!session) {
-    router.push("/login");
-    return null;
-  }
-
   const handleSubmit = async (caseData: Partial<Case>) => {
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate a new case ID
-      const newCaseId = Math.random().toString(36).substr(2, 9);
-      
-      // In a real app, this would be an API call
-      console.log("Creating new case:", { ...caseData, id: newCaseId });
-      
-      toast.success("Caso creado exitosamente. Analizando contenido...");
-      
-      // Redirect to the new case detail page
-      router.push(`/cases/${newCaseId}`);
-      
-    } catch (error) {
-      console.error("Error creating case:", error);
-      toast.error("Error al crear el caso. Por favor intenta nuevamente.");
-    } finally {
-      setIsLoading(false);
+    if (!countriesQuery.data || countriesQuery.data.length === 0) {
+      toast.error("No hay países disponibles para crear un caso.");
+      return;
     }
+
+    // Use the first country as a default for now
+    const defaultCountryId = countriesQuery.data[0].id;
+
+    createCaseMutation.mutate({
+      userId: session.user.id,
+      countryId: defaultCountryId,
+      areaOfLawId: caseData.areaOfLawId,
+      caseName: caseData.caseName!,
+      clientName: caseData.clientName ?? null, // Ensure clientName is string or null
+      caseDescriptionInput: caseData.caseDescriptionInput!,
+    });
   };
 
   return (
@@ -61,7 +60,7 @@ export default function NewCasePage() {
       
       <CaseForm 
         onSubmit={handleSubmit}
-        isLoading={isLoading}
+        isLoading={createCaseMutation.isPending}
       />
     </div>
   );
