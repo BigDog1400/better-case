@@ -1,33 +1,75 @@
-# Create T3 App
+# Legal AI Platform for Venezuelan Lawyers
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app` with [Better Auth](https://better-auth.com) as Authentication Provider.
+## Project Goal
 
-## What's next? How do I make an app with this?
+The main goal of this project is to build a platform that helps lawyers in Venezuela win their cases by providing them with smart solutions and relevant legal information. The platform aims to process legal documents and create embeddings from them, allowing for efficient and intelligent searching of laws related to each specific case.
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## How It Works
 
-- [Next.js](https://nextjs.org)
-- [Better Auth](https://better-auth.com)
-- [Prisma](https://www.prisma.io/)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+The project is divided into two main components:
 
-## Learn More About Better Auth
+1.  **Web Application:** A web application built with the [T3 Stack](https://create.t3.gg/) (Next.js, tRPC, Prisma, Tailwind CSS) and `better-auth` for authentication. This application is intended to be the main interface for lawyers to interact with the platform.
 
-To learn more about [Better Auth](https://better-auth.com/), take a look at the following resources:
+2.  **Ingestion Pipeline:** A separate project built with [Bun](https://bun.sh/) that is responsible for processing legal documents. This pipeline uses the Mistral AI API to perform Optical Character Recognition (OCR) on PDF documents, extract the text, and save it in a structured format.
 
-- [Documentation](https://better-auth.com/docs)
-- [Discord](https://discord.gg/GYC3W7tZzb) — Join our Discord server to ask questions and get help
+### Ingestion Pipeline Details
 
-## Learn More About the T3 Stack
+The ingestion pipeline is the core of the project's data processing capabilities. Here's how it works:
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+-   It takes a URL of a PDF document as input (currently hardcoded to a Venezuelan law document).
+-   It uses the Mistral AI API's OCR capabilities (`mistral-ocr-latest`) to process the document.
+-   It extracts the text content from each page and saves it as a single Markdown file (`output.md`).
+-   It also extracts any images from the document and saves them as individual PNG files.
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+This process is the first step towards creating a searchable database of legal documents. The extracted text can then be used to generate embeddings for semantic search.
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+## Current Status
 
-## How do I deploy this?
+The project is currently in a proof-of-concept stage. The main focus has been on developing the ingestion pipeline, which is functional and can process PDF documents as described above. The web application is a basic T3 stack setup and needs to be further developed to integrate with the ingestion pipeline and provide the intended features for lawyers.
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+This project serves as a strong foundation for building a powerful AI-powered legal assistance platform. The ingestion pipeline demonstrates the ability to process and extract information from unstructured legal documents, which is a critical first step.
+
+## How to Run
+
+### Web Application
+
+To run the web application, you need to have Node.js and pnpm installed.
+
+1.  Install dependencies:
+    ```bash
+    pnpm install
+    ```
+
+2.  Set up the database:
+    ```bash
+    prisma migrate dev
+    ```
+
+3.  Run the development server:
+    ```bash
+    pnpm dev
+    ```
+
+### Ingestion Pipeline
+
+To run the ingestion pipeline, you need to have Bun installed.
+
+1.  Navigate to the `ingestion-pipeline` directory:
+    ```bash
+    cd ingestion-pipeline
+    ```
+
+2.  Install dependencies:
+    ```bash
+    bun install
+    ```
+
+3.  Set up your Mistral AI API key as an environment variable:
+    ```bash
+    export MISTRAL_API_KEY="your-api-key"
+    ```
+
+4.  Run the pipeline:
+    ```bash
+    bun run index.ts
+    ```
